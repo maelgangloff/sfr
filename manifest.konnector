@@ -1,0 +1,90 @@
+{
+  "version": "1.0.0",
+  "name": "SFR",
+  "type": "konnector",
+  "language": "node",
+  "icon": "icon.png",
+  "slug": "sfr",
+  "source": "git://github.com/konnectors/sfr.git",
+  "editor": "Cozy",
+  "vendor_link": "https://www.sfr.fr/cas/login",
+  "categories": ["telecom"],
+  "fields": {
+    "login": {
+      "type": "text"
+    },
+    "password": {
+      "type": "password"
+    },
+    "advancedFields": {
+      "folderPath": {
+        "advanced": true,
+        "isRequired": false
+      }
+    }
+  },
+  "data_types": [
+    "bill"
+  ],
+  "screenshots": [],
+  "permissions": {
+    "bank operations": {
+      "type": "io.cozy.bank.operations"
+    },
+    "bills": {
+      "type": "io.cozy.bills"
+    },
+    "files": {
+      "type": "io.cozy.files"
+    },
+    "accounts": {
+      "type": "io.cozy.accounts",
+      "verbs": ["GET"]
+    }
+  },
+  "developer": {
+    "name": "Cozy Cloud",
+    "url": "https://cozy.io"
+  },
+  "langs": ["fr", "en"],
+  "locales": {
+    "fr": {
+      "description": "Récupère toutes vos factures",
+      "long_description": "<p>Récupère les factures de vos contrats téléphone mobile et box internet.</p><p>A noter :</p><ul><li>Les factures des contrats résiliés ne sont pas importées.</li><li>Les comptes avec plusieurs contrats ne sont pas encore gérés, les factures d'un seul contrat seront importées.</li><li>Les comptes RED ne sont pas encore gérés, les factures ne seront pas importées.</li></ul>",
+      "permissions": {
+        "bank operations": {
+          "description": "Utilisé pour relier les factures à des operations bancaires"
+        },
+        "bills": {
+          "description": "Utilisé pour sauvegarder les données de facturation"
+        },
+        "files": {
+          "description": "Utilisé pour sauvegarder les factures"
+        },
+        "accounts": {
+          "description": "Utilisé pour obtenir les données du compte"
+        }
+      }
+    },
+    "en": {
+      "description": "Fetch your bills",
+      "long_description": "<p>Get the bills from your mobile phone and internet box contracts.</p><p>Note :</p><ul><li>nvoices for terminated contracts are not imported.</li><li>Accounts with sevral contracts are not yet managed, the invoices of a single contract will be imported.</li><li>RED accounts are not yet managed, invoices will not be imported.</li></ul>",
+      "permissions": {
+        "bank operations": {
+          "description": "Required to link bank operations to bills"
+        },
+        "bills": {
+          "description": "Required to save the bills data"
+        },
+        "files": {
+          "description": "Required to save the bills"
+        },
+        "accounts": {
+          "description": "Required to get the account's data"
+        }
+      }
+    }
+  },
+  "banksTransactionRegExp": "\\bsfr\\b",
+  "manifest_version": "2"
+}
