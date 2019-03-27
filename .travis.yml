@@ -6,6 +6,7 @@ env:
   - GH_USER_EMAIL="travis@example.org"
   - GH_USER_NAME="cozy-bot"
   - DEPLOY_REPOSITORY="git@github.com:konnectors/sfr.git"
+  - secure: H/HGZoKY4/bhGtXJJ05P0Zlxcpe3wnU4fFA/aduD1K/tumufWBJqF/B7sNVE1g5i8YHzzpxITKIbwQNMFuh8yd32fE2bTSbPG9/Sy2N48oWgIvBoV878JLKsGP1PATXl4jv5Djbd7XYFeQmdHdnjMsWN9+0oJIl2WBTkzhuZ/4nh2kDyR8p3pIEMKP0aSJbxJY0ta/+zo39FFlWYeK6/p+agaYn3WWH7PQfRNksuAJSCRIbj3sYLtsAmev6qldYridbAsxzQJp8jjV8r+xvjrFStSBoNpUg5oABzIEeAqY+h7iWsIfgFVX5zNHRhBFJGFwfB4H0mH+sOzcGRqsBMn1KF2lO75CtUGTp63j5Uz4VcdcOg21VhhQ6DEEBvNv0JEvztK4aXyvshAjSF4OyRwzHWtRTLdAY4LSGy7D+MJQAmJlo+uAkDMlR7kJJIP6l1n/PnfUqXKhFerzKsQiCHr6+XP+MZuUx0uj6yTGk8EMejlYiTze/j61LocYPBoclc4KK7DnPOezAxqOqqPmAXE4JDxpBTKWChWHPhoVUqauVvgw52FaUjJY+h8og6mDeFOnlm49t4TEYCqay4fnBoy/1AIkJIEpCPqbhlV1BZ5EUYMjPABTENdHqZwHC62rBTVauFCu5n2xCvOwhP/u8kB2bfAzYYzMkzsY1Se0n45Ss=
 cache:
   yarn: true
   directories:
