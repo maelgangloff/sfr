@@ -49,8 +49,8 @@
   "langs": ["fr", "en"],
   "locales": {
     "fr": {
-      "description": "Récupère toutes vos factures SFR",
-      "long_description": "Récupère toutes vos factures SFR",
+      "description": "Récupère toutes vos factures",
+      "long_description": "<p>Récupère les factures de vos contrats téléphone mobile et box internet.</p><p>A noter :</p><ul><li>Les factures des contrats résiliés ne sont pas importées.</li><li>Les comptes avec plusieurs contrats ne sont pas encore gérés, les factures d'un seul contrat seront importées.</li><li>Les comptes RED ne sont pas encore gérés, les factures ne seront pas importées.</li></ul>",
       "permissions": {
         "bank operations": {
           "description": "Utilisé pour relier les factures à des operations bancaires"
@@ -67,7 +67,8 @@
       }
     },
     "en": {
-      "description": "Retrieves all your SFR invoices",
+      "description": "Fetch your bills",
+      "long_description": "<p>Get the bills from your mobile phone and internet box contracts.</p><p>Note :</p><ul><li>nvoices for terminated contracts are not imported.</li><li>Accounts with sevral contracts are not yet managed, the invoices of a single contract will be imported.</li><li>RED accounts are not yet managed, invoices will not be imported.</li></ul>",
       "permissions": {
         "bank operations": {
           "description": "Required to link bank operations to bills"
