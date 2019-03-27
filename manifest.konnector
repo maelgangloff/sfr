@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "name": "SFR mobile",
+  "name": "SFR",
   "type": "konnector",
   "language": "node",
   "icon": "icon.png",
