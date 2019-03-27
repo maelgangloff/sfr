@@ -84,16 +84,20 @@ class SfrConnector extends CookieKonnector {
       return
     }
 
-    const folderPath = `${fields.folderPath}/${this.currentContract}`
-    await mkdirp(folderPath)
-
-    const entries = (await retry(this.fetchBillsAttempts, {
+    const entries = await retry(this.fetchBillsAttempts, {
       interval: 5000,
       throw_original: true,
       // do not retry if we get the LOGIN_FAILED error code
       predicate: err => err.message !== 'LOGIN_FAILED',
       context: this
-    })).map(doc => ({
+    })
+
+    const folderPath = `${fields.folderPath}/${this.contractType}_${
+      this.currentContract
+    }`
+    await mkdirp(folderPath)
+
+    const bills = entries.map(doc => ({
       ...doc,
       vendor: 'SFR',
       currency: '€',
@@ -107,7 +111,7 @@ class SfrConnector extends CookieKonnector {
       }
     }))
 
-    return this.saveBills(entries, folderPath, {
+    return this.saveBills(bills, folderPath, {
       identifiers: ['sfr']
     })
   }
