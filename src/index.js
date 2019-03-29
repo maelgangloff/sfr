@@ -84,16 +84,20 @@ class SfrConnector extends CookieKonnector {
       return
     }
 
-    const folderPath = `${fields.folderPath}/${this.currentContract}`
-    await mkdirp(folderPath)
-
-    const entries = (await retry(this.fetchBillsAttempts, {
+    const entries = await retry(this.fetchBillsAttempts, {
       interval: 5000,
       throw_original: true,
       // do not retry if we get the LOGIN_FAILED error code
       predicate: err => err.message !== 'LOGIN_FAILED',
       context: this
-    })).map(doc => ({
+    })
+
+    const folderPath = `${fields.folderPath}/${
+      this.currentContract
+    } ${this.contractType.toUpperCase()}`
+    await mkdirp(folderPath)
+
+    const bills = entries.map(doc => ({
       ...doc,
       vendor: 'SFR',
       currency: '€',
@@ -107,7 +111,7 @@ class SfrConnector extends CookieKonnector {
       }
     }))
 
-    return this.saveBills(entries, folderPath, {
+    return this.saveBills(bills, folderPath, {
       identifiers: ['sfr']
     })
   }
@@ -193,7 +197,7 @@ class SfrConnector extends CookieKonnector {
       .then($ => {
         if (this.contractType === 'mobile') {
           return parseMobileBills.bind(this)($)
-        } else if (this.contractType === 'fixe') {
+        } else if (this.contractType === 'internet') {
           return parseFixeBills.bind(this)($)
         }
       })
@@ -227,7 +231,7 @@ function fetchBillingInfo() {
     if (finalPath === '/facture-mobile/consultation') {
       this.contractType = 'mobile'
     } else if (finalPath === '/facture-fixe/consultation') {
-      this.contractType = 'fixe'
+      this.contractType = 'internet'
     } else {
       throw new Error('Unknown SFR contract type')
     }
