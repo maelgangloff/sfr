@@ -92,9 +92,9 @@ class SfrConnector extends CookieKonnector {
       context: this
     })
 
-    const folderPath = `${fields.folderPath}/${this.contractType}_${
+    const folderPath = `${fields.folderPath}/${
       this.currentContract
-    }`
+    } ${this.contractType.toUpperCase()}`
     await mkdirp(folderPath)
 
     const bills = entries.map(doc => ({
@@ -197,7 +197,7 @@ class SfrConnector extends CookieKonnector {
       .then($ => {
         if (this.contractType === 'mobile') {
           return parseMobileBills.bind(this)($)
-        } else if (this.contractType === 'fixe') {
+        } else if (this.contractType === 'internet') {
           return parseFixeBills.bind(this)($)
         }
       })
@@ -231,7 +231,7 @@ function fetchBillingInfo() {
     if (finalPath === '/facture-mobile/consultation') {
       this.contractType = 'mobile'
     } else if (finalPath === '/facture-fixe/consultation') {
-      this.contractType = 'fixe'
+      this.contractType = 'internet'
     } else {
       throw new Error('Unknown SFR contract type')
     }
