@@ -67,7 +67,7 @@
     },
     "en": {
       "description": "Fetch your bills",
-      "long_description": "<p>Get the bills from your mobile phone and internet box contracts.</p><p>Note :</p><ul><li>nvoices for terminated contracts are not imported.</li><li>Accounts with sevral contracts are not yet managed, the invoices of a single contract will be imported.</li><li>RED accounts are not yet managed, invoices will not be imported.</li></ul>",
+      "long_description": "<p>Get the bills from your mobile phone and internet box contracts.</p><p>Note :</p><ul><li>Invoices for terminated contracts are not imported.</li><li>Accounts with sevral contracts are not yet managed, the invoices of a single contract will be imported.</li><li>RED accounts are not yet managed, invoices will not be imported.</li></ul>",
       "permissions": {
         "bank operations": {
           "description": "Required to link bank operations to bills"
