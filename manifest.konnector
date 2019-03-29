@@ -9,7 +9,8 @@
   "editor": "Cozy",
   "vendor_link": "https://www.sfr.fr/cas/login",
   "categories": [
-    "telecom"
+    "telecom",
+    "isp"
   ],
   "fields": {
     "login": {
