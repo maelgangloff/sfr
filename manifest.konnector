@@ -1,5 +1,5 @@
 {
-  "version": "1.1.0",
+  "version": "1.0.1",
   "name": "SFR",
   "type": "konnector",
   "language": "node",
@@ -9,7 +9,8 @@
   "editor": "Cozy",
   "vendor_link": "https://www.sfr.fr/cas/login",
   "categories": [
-    "telecom"
+    "telecom",
+    "isp"
   ],
   "fields": {
     "login": {
