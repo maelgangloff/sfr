@@ -149,6 +149,14 @@ class SfrConnector extends CookieKonnector {
     )
 
     this.sfrAccount = compte.ficheMonCompte
+
+    const key =
+      getLoginType(fields.login) === 'mobile' ? 'lignesMobiles' : 'lignesFixes'
+    if (this.sfrAccount[key][0].profilPSW.includes('RED')) {
+      log('error', `Bad profile type ${this.sfrAccount[key][0].profilPSW}`)
+      log('error', 'Cannot handle RED accounts at the moment')
+      throw new Error(errors.VENDOR_DOWN)
+    }
   }
 
   async logIn(form, fields, $) {
@@ -442,4 +450,12 @@ function parseMobileBills($) {
           return bills
         })
     })
+}
+
+function getLoginType(login) {
+  if (login.match(/^\d{10}$/)) {
+    return 'mobile'
+  } else {
+    return 'internet'
+  }
 }
