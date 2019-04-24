@@ -11,10 +11,12 @@ const {
   mkdirp,
   utils
 } = require('cozy-konnector-libs')
+
 const DEBUG = false
 
 const parseMobileBills = require('./sfrmobile.js')
 const parseFixeBills = require('./sfrfixe.js')
+const parseRedMobileBills = require('./redmobile.js')
 
 class SfrConnector extends CookieKonnector {
   async fetch(fields) {
@@ -155,11 +157,8 @@ class SfrConnector extends CookieKonnector {
       getLoginType.bind(this)(fields.login) === 'mobile'
         ? 'lignesMobiles'
         : 'lignesFixes'
-
     if (this.sfrAccount[key][0].profilPSW.includes('RED')) {
-      log('error', `Bad profile type ${this.sfrAccount[key][0].profilPSW}`)
-      log('error', 'Cannot handle RED accounts at the moment')
-      throw new Error(errors.VENDOR_DOWN)
+      log('info', `RED account detected`)
     }
   }
 
@@ -211,6 +210,8 @@ class SfrConnector extends CookieKonnector {
           return parseMobileBills.bind(this)($)
         } else if (this.contractType === 'internet') {
           return parseFixeBills.bind(this)($)
+        } else if (this.contractType === 'redmobile') {
+          return parseRedMobileBills.bind(this)($)
         }
       })
   }
@@ -244,15 +245,16 @@ function fetchBillingInfo() {
       this.contractType = 'mobile'
     } else if (finalPath === '/facture-fixe/consultation') {
       this.contractType = 'internet'
+    } else if (finalPath === '/facture-mobile/consultation?red=1') {
+      this.contractType = 'redmobile'
     } else {
       throw new Error('Unknown SFR contract type')
     }
     const finalHostname = response.request.uri.hostname
     log('info', finalHostname, 'finalHostname after fetch billing info')
     // sfr : espace-client.sfr.fr
-    // red : ?
+    // red : espace-client-red.sfr.fr
     // numericable : ?
-
     return response.body
   })
 }
