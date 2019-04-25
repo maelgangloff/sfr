@@ -11,10 +11,12 @@ const {
   mkdirp,
   utils
 } = require('cozy-konnector-libs')
-const moment = require('moment')
-const bluebird = require('bluebird')
-const cheerio = require('cheerio')
+
 const DEBUG = false
+
+const parseMobileBills = require('./sfrmobile.js')
+const parseFixeBills = require('./sfrfixe.js')
+const parseRedMobileBills = require('./redmobile.js')
 
 class SfrConnector extends CookieKonnector {
   async fetch(fields) {
@@ -155,11 +157,8 @@ class SfrConnector extends CookieKonnector {
       getLoginType.bind(this)(fields.login) === 'mobile'
         ? 'lignesMobiles'
         : 'lignesFixes'
-
     if (this.sfrAccount[key][0].profilPSW.includes('RED')) {
-      log('error', `Bad profile type ${this.sfrAccount[key][0].profilPSW}`)
-      log('error', 'Cannot handle RED accounts at the moment')
-      throw new Error(errors.VENDOR_DOWN)
+      log('info', `RED account detected`)
     }
   }
 
@@ -211,6 +210,8 @@ class SfrConnector extends CookieKonnector {
           return parseMobileBills.bind(this)($)
         } else if (this.contractType === 'internet') {
           return parseFixeBills.bind(this)($)
+        } else if (this.contractType === 'redmobile') {
+          return parseRedMobileBills.bind(this)($)
         }
       })
   }
@@ -244,216 +245,18 @@ function fetchBillingInfo() {
       this.contractType = 'mobile'
     } else if (finalPath === '/facture-fixe/consultation') {
       this.contractType = 'internet'
+    } else if (finalPath === '/facture-mobile/consultation?red=1') {
+      this.contractType = 'redmobile'
     } else {
       throw new Error('Unknown SFR contract type')
     }
     const finalHostname = response.request.uri.hostname
     log('info', finalHostname, 'finalHostname after fetch billing info')
     // sfr : espace-client.sfr.fr
-    // red : ?
+    // red : espace-client-red.sfr.fr
     // numericable : ?
-
     return response.body
   })
-}
-
-function parseFixeBills($) {
-  const result = []
-  moment.locale('fr')
-  const baseURL = 'https://espace-client.sfr.fr'
-
-  // handle the special case of the first bill
-  const $firstBill = $('#lastFacture')
-  const firstBillUrl = $firstBill.find('a.sr-chevron').attr('href')
-
-  if (firstBillUrl) {
-    const fields = $firstBill
-      .find('.sr-container-content')
-      .eq(0)
-      .find('span')
-    const firstBillDate = moment(
-      fields
-        .eq(1)
-        .text()
-        .trim(),
-      'DD/MM/YYYY'
-    )
-    const price = fields
-      .eq(2)
-      .text()
-      .trim()
-      .replace('€', '')
-      .replace(',', '.')
-
-    const bill = {
-      date: firstBillDate.toDate(),
-      amount: parseFloat(price),
-      fileurl: `${baseURL}${firstBillUrl}`
-    }
-
-    result.push(bill)
-  } else {
-    log('info', 'wrong url for first PDF bill.')
-  }
-
-  return bluebird
-    .mapSeries(Array.from($('table.sr-multi-payment tbody tr')), tr => {
-      let link = $(tr)
-        .find('td')
-        .eq(1)
-        .find('a')
-      if (link.length === 1) {
-        link = baseURL + link.attr('href')
-        return this.request(link).then($ =>
-          $('.sr-container-wrapper-m')
-            .eq(0)
-            .html()
-        )
-      } else {
-        return false
-      }
-    })
-    .then(list => list.filter(item => item))
-    .then(list =>
-      list.map(item => {
-        const $ = cheerio.load(item)
-        const fileurl = $('a.sr-chevron').attr('href')
-        const fields = $('.sr-container-box-M')
-          .eq(0)
-          .find('span')
-        const date = moment(
-          fields
-            .eq(1)
-            .text()
-            .trim(),
-          'DD/MM/YYYY'
-        )
-        const price = fields
-          .eq(2)
-          .text()
-          .trim()
-          .replace('€', '')
-          .replace(',', '.')
-        if (price) {
-          const bill = {
-            date: date.toDate(),
-            amount: parseFloat(price),
-            fileurl: `${baseURL}${fileurl}`
-          }
-          return bill
-        } else return null
-      })
-    )
-    .then(list => list.filter(item => item))
-    .then(bills => {
-      if (result.length) bills.unshift(result[0])
-      return bills
-    })
-}
-
-function parseMobileBills($) {
-  const result = []
-  moment.locale('fr')
-  const baseURL = 'https://espace-client.sfr.fr'
-
-  // handle the special case of the first bill
-  const $firstBill = $('.sr-container-wrapper-m').eq(0)
-  const firstBillUrl = $firstBill.find('#lien-telecharger-pdf').attr('href')
-
-  if (firstBillUrl) {
-    const fields = $firstBill
-      .find('.sr-container-content')
-      .eq(0)
-      .find('span:not(.sr-text-grey-14)')
-    const firstBillDate = moment(fields.eq(0).text(), 'DD MMMM YYYY')
-    const price = fields
-      .eq(1)
-      .text()
-      .replace('€', '')
-      .replace(',', '.')
-
-    const bill = {
-      date: firstBillDate.toDate(),
-      amount: parseFloat(price),
-      fileurl: `${baseURL}${firstBillUrl}`
-    }
-
-    result.push(bill)
-  } else {
-    log('info', 'wrong url for first PDF bill.')
-  }
-
-  let trs = Array.from($('table.sr-multi-payment tbody tr'))
-
-  function getMoreBills() {
-    // find some more rows if any
-    return this.request(`${baseURL}/facture-mobile/consultation/plusDeFactures`)
-      .then($ => $('tr'))
-      .then($trs => {
-        if ($trs.length > trs.length) {
-          trs = Array.from($trs)
-          return getMoreBills.bind(this)()
-        } else return Promise.resolve()
-      })
-  }
-
-  return getMoreBills
-    .bind(this)()
-    .then(() => {
-      return bluebird
-        .mapSeries(trs, tr => {
-          let link = $(tr)
-            .find('td')
-            .eq(1)
-            .find('a')
-          if (link.length === 1) {
-            link = baseURL + link.attr('href')
-            return this.request(link).then($ =>
-              $('.sr-container-wrapper-m')
-                .eq(0)
-                .html()
-            )
-          } else {
-            return false
-          }
-        })
-        .then(list => list.filter(item => item))
-        .then(list =>
-          list.map(item => {
-            const $ = cheerio.load(item)
-            const fileurl = $('#lien-duplicata-pdf-').attr('href')
-            const fields = $('.sr-container-content')
-              .eq(0)
-              .find('span:not(.sr-text-grey-14)')
-            const date = moment(
-              fields
-                .eq(0)
-                .text()
-                .trim(),
-              'DD MMMM YYYY'
-            )
-            const price = fields
-              .eq(1)
-              .text()
-              .trim()
-              .replace('€', '')
-              .replace(',', '.')
-            if (price) {
-              const bill = {
-                date: date.toDate(),
-                amount: parseFloat(price),
-                fileurl: `${baseURL}${fileurl}`
-              }
-              return bill
-            } else return null
-          })
-        )
-        .then(list => list.filter(item => item))
-        .then(bills => {
-          if (result.length) bills.unshift(result[0])
-          return bills
-        })
-    })
 }
 
 function getLoginType(login) {
