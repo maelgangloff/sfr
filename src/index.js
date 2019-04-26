@@ -158,7 +158,10 @@ class SfrConnector extends CookieKonnector {
         ? 'lignesMobiles'
         : 'lignesFixes'
     if (this.sfrAccount[key][0].profilPSW.includes('RED')) {
-      log('info', `RED account detected`)
+      log(
+        'info',
+        `RED account detected type: ${this.sfrAccount[key][0].profilPSW}`
+      )
     }
   }
 
@@ -247,6 +250,9 @@ function fetchBillingInfo() {
       this.contractType = 'internet'
     } else if (finalPath === '/facture-mobile/consultation?red=1') {
       this.contractType = 'redmobile'
+    } else if (finalPath === '/facture-fixe/consultation?red=1') {
+      this.contractType = 'redbox'
+      throw new Error('Red box contract, not implemented')
     } else {
       throw new Error('Unknown SFR contract type')
     }
