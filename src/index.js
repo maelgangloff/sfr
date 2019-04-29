@@ -17,6 +17,7 @@ const DEBUG = false
 const parseMobileBills = require('./sfrmobile.js')
 const parseFixeBills = require('./sfrfixe.js')
 const parseRedMobileBills = require('./redmobile.js')
+const parseRedBoxBills = require('./redbox.js')
 
 class SfrConnector extends CookieKonnector {
   async fetch(fields) {
@@ -215,6 +216,8 @@ class SfrConnector extends CookieKonnector {
           return parseFixeBills.bind(this)($)
         } else if (this.contractType === 'redmobile') {
           return parseRedMobileBills.bind(this)($)
+        } else if (this.contractType === 'redbox') {
+          return parseRedBoxBills.bind(this)($)
         }
       })
   }
@@ -252,7 +255,6 @@ function fetchBillingInfo() {
       this.contractType = 'redmobile'
     } else if (finalPath === '/facture-fixe/consultation?red=1') {
       this.contractType = 'redbox'
-      throw new Error('Red box contract, not implemented')
     } else {
       throw new Error('Unknown SFR contract type')
     }
