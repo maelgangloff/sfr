@@ -283,7 +283,7 @@ function getLoginType(login) {
     this.sfrAccount.lignesMobiles.length === 0
   ) {
     log('error', 'both line types are empty')
-    throw new Error(errors.USER_ACTION_NEEDED.ACCOUNT_REMOVED)
+    throw new Error(errors.USER_ACTION_NEEDED_ACCOUNT_REMOVED)
   } else if (login.match(/^\d{10}$/)) {
     return 'mobile'
   } else {
