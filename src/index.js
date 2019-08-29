@@ -30,6 +30,7 @@ class SfrConnector extends CookieKonnector {
       })
 
       await this.logIn(form, fields, $)
+      await this.saveSession()
     }
 
     // // trying to change contract
@@ -107,11 +108,7 @@ class SfrConnector extends CookieKonnector {
       contract: this.currentContract,
       filename: `${utils.formatDate(doc.date)}_SFR_${doc.amount.toFixed(
         2
-      )}€.pdf`,
-      metadata: {
-        importDate: new Date(),
-        version: 1
-      }
+      )}€.pdf`
     }))
 
     return this.saveBills(bills, folderPath, {
@@ -255,6 +252,8 @@ function fetchBillingInfo() {
       this.contractType = 'redmobile'
     } else if (finalPath === '/facture-fixe/consultation?red=1') {
       this.contractType = 'redbox'
+    } else if (finalPath.includes('/cas/login')) {
+      throw new Error(errors.VENDOR_DOWN)
     } else {
       throw new Error('Unknown SFR contract type')
     }
