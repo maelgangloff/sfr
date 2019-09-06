@@ -105,7 +105,7 @@ class SfrConnector extends CookieKonnector {
       )}€.pdf`
     }))
 
-    return this.saveBills(bills, folderPath, {
+    return await this.saveBills(bills, folderPath, {
       identifiers: ['sfr']
     })
   }
@@ -185,9 +185,34 @@ class SfrConnector extends CookieKonnector {
     }
   }
 
+  async getConsulterFacturesWithoutRedirectionError() {
+    let redirCount = 0
+    let response
+    try {
+      response = await this.request({
+        url: 'https://www.sfr.fr/routage/consulter-facture',
+        resolveWithFullResponse: true,
+        followAllRedirects: false,
+        maxRedirects: 10,
+        followOriginalHttpMethod: true,
+        followRedirect: resp => {
+          redirCount++
+          response = resp
+          const result = redirCount < 10
+          return result
+        }
+      })
+    } catch (err) {
+      log('info', `Ignoring redirect error ${err.message}`)
+    }
+
+    return response
+  }
+
   async testSession() {
-    const $ = await this.request('https://www.sfr.fr/routage/consulter-facture')
-    const result = $('#loginForm').length === 0
+    const response = await this.getConsulterFacturesWithoutRedirectionError()
+    const $ = response.body
+    const result = typeof $ === 'function' && $('#loginForm').length === 0
     if (result === false) log('warn', 'wrong session')
     return result
   }
@@ -233,10 +258,8 @@ function getFormData($form) {
 
 async function fetchBillingInfo() {
   log('info', 'Fetching bill info')
-  const response = await this.request({
-    url: 'https://www.sfr.fr/routage/consulter-facture',
-    resolveWithFullResponse: true
-  })
+
+  const response = await this.getConsulterFacturesWithoutRedirectionError()
 
   // check that the page was not redirected to another sfr service
   const finalPath = response.request.uri.path
