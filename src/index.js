@@ -88,13 +88,7 @@ class SfrConnector extends CookieKonnector {
       return
     }
 
-    const entries = await retry(this.fetchBillsAttempts, {
-      interval: 5000,
-      throw_original: true,
-      // do not retry if we get the LOGIN_FAILED error code
-      predicate: err => err.message !== 'LOGIN_FAILED',
-      context: this
-    })
+    const entries = await this.fetchBillsAttempts()
 
     const folderPath = `${fields.folderPath}/${
       this.currentContract
@@ -193,7 +187,9 @@ class SfrConnector extends CookieKonnector {
 
   async testSession() {
     const $ = await this.request('https://www.sfr.fr/routage/consulter-facture')
-    return $('#loginForm').length === 0
+    const result = $('#loginForm').length === 0
+    if (result === false) log('warn', 'wrong session')
+    return result
   }
 
   async getForm() {
@@ -235,35 +231,37 @@ function getFormData($form) {
     .reduce((memo, input) => ({ ...memo, [input.name]: input.value }), {})
 }
 
-function fetchBillingInfo() {
+async function fetchBillingInfo() {
   log('info', 'Fetching bill info')
-  return this.request({
+  const response = await this.request({
     url: 'https://www.sfr.fr/routage/consulter-facture',
     resolveWithFullResponse: true
-  }).then(response => {
-    // check that the page was not redirected to another sfr service
-    const finalPath = response.request.uri.path
-    log('info', finalPath, 'finalPath after fetch billing info')
-    if (finalPath === '/facture-mobile/consultation') {
-      this.contractType = 'mobile'
-    } else if (finalPath === '/facture-fixe/consultation') {
-      this.contractType = 'internet'
-    } else if (finalPath === '/facture-mobile/consultation?red=1') {
-      this.contractType = 'redmobile'
-    } else if (finalPath === '/facture-fixe/consultation?red=1') {
-      this.contractType = 'redbox'
-    } else if (finalPath.includes('/cas/login')) {
-      throw new Error(errors.VENDOR_DOWN)
-    } else {
-      throw new Error('Unknown SFR contract type')
-    }
-    const finalHostname = response.request.uri.hostname
-    log('info', finalHostname, 'finalHostname after fetch billing info')
-    // sfr : espace-client.sfr.fr
-    // red : espace-client-red.sfr.fr
-    // numericable : ?
-    return response.body
   })
+
+  // check that the page was not redirected to another sfr service
+  const finalPath = response.request.uri.path
+  log('info', finalPath, 'finalPath after fetch billing info')
+  if (finalPath === '/facture-mobile/consultation') {
+    this.contractType = 'mobile'
+  } else if (finalPath === '/facture-fixe/consultation') {
+    this.contractType = 'internet'
+  } else if (finalPath === '/facture-mobile/consultation?red=1') {
+    this.contractType = 'redmobile'
+  } else if (finalPath === '/facture-fixe/consultation?red=1') {
+    this.contractType = 'redbox'
+  } else if (finalPath.includes('/cas/login')) {
+    await this.resetSession()
+    // next connector run may work
+    throw new Error(errors.VENDOR_DOWN)
+  } else {
+    throw new Error('Unknown SFR contract type')
+  }
+  const finalHostname = response.request.uri.hostname
+  log('info', finalHostname, 'finalHostname after fetch billing info')
+  // sfr : espace-client.sfr.fr
+  // red : espace-client-red.sfr.fr
+  // numericable : ?
+  return response.body
 }
 
 function getLoginType(login) {
