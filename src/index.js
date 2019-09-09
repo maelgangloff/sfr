@@ -166,10 +166,16 @@ class SfrConnector extends CookieKonnector {
     }
 
     if ($('.g-recaptcha').length) {
-      submitForm['g-recaptcha-response'] = await solveCaptcha({
-        websiteKey: $('.g-recaptcha').data('sitekey'),
-        websiteURL: 'https://www.sfr.fr/cas/login'
-      })
+      const websiteKey = $('.g-recaptcha').data('sitekey')
+      if (websiteKey)
+        submitForm['g-recaptcha-response'] = await solveCaptcha({
+          websiteKey,
+          websiteURL: 'https://www.sfr.fr/cas/login'
+        })
+      else {
+        log('error', 'could not find a web site key')
+        throw new Error('VENDOR_DOWN')
+      }
     }
 
     const login$ = await this.request({
@@ -213,7 +219,10 @@ class SfrConnector extends CookieKonnector {
     const response = await this.getConsulterFacturesWithoutRedirectionError()
     const $ = response.body
     const result = typeof $ === 'function' && $('#loginForm').length === 0
-    if (result === false) log('warn', 'wrong session')
+    if (result === false) {
+      log('warn', 'wrong session')
+      await this.resetSession()
+    }
     return result
   }
 
