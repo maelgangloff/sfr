@@ -2,12 +2,12 @@ process.env.SENTRY_DSN =
   process.env.SENTRY_DSN ||
   'https://896462846d0e40d0b1522d98ab103133@sentry.cozycloud.cc/118'
 
+const sleep = require('util').promisify(global.setTimeout)
 const {
   CookieKonnector,
   errors,
   log,
   solveCaptcha,
-  retry,
   mkdirp,
   utils
 } = require('cozy-konnector-libs')
@@ -19,82 +19,139 @@ const parseFixeBills = require('./sfrfixe.js')
 const parseRedMobileBills = require('./redmobile.js')
 const parseRedBoxBills = require('./redbox.js')
 
-class SfrConnector extends CookieKonnector {
-  async fetch(fields) {
-    if (!(await this.testSession())) {
-      await this.testLogin(fields)
-      const { form, $ } = await retry(this.getForm, {
-        interval: 5000,
-        throw_original: true,
-        context: this
-      })
+const CozyBrowser = require('cozy-konnector-libs/dist/libs/CozyBrowser')
+const browser = new CozyBrowser()
 
-      await this.logIn(form, fields, $)
-      await this.saveSession()
+browser.pipeline.addHandler(function(browser, request) {
+  if (request.url.includes('/profile-stats.js')) {
+    log('info', `ignore: ${request.url}`)
+    return {
+      status: 200,
+      statusText: 'OK',
+      url: request.url,
+      _consume: async () => ''
     }
+  }
+})
 
-    // // trying to change contract
-    // this.request = this.requestFactory({
-    //   cheerio: false,
-    //   json: false,
-    //   debug: DEBUG,
-    //   headers: {}
-    // })
-    // const rmehcookie = this._jar
-    //   .getCookies('https://sfr.fr/')
-    //   .find(cookie => cookie.key === 'rmeh').value
-    // const body = await this.request(
-    //   `https://www.sfr.fr/fragments/profile-stats.js?u=${rmehcookie}#`
-    // )
+class SfrConnector extends CookieKonnector {
+  async testSession() {
+    return true
+  }
+  // async testSession() {
+  //   for (const cookie of this._jar._jar.toJSON().cookies) {
+  //     browser.setCookie(
+  //       {
+  //         name: cookie.key,
+  //         domain: cookie.domain,
+  //         path: cookie.path,
+  //         expires: cookie.expires,
+  //         maxAge: cookie['max-age'],
+  //         secure: cookie.secure,
+  //         httpOnly: cookie.httpOnly
+  //       },
+  //       cookie.value
+  //     )
+  //   }
 
-    // const contracts = JSON.parse(
-    //   body.match(/_.LL=(\[.*\]);/)[1].replace(/'/g, '"')
-    // )
-    // console.log(contracts)
+  //   log('info', 'mon espace client')
+  //   await this.visit('https://www.sfr.fr/mon-espace-client/')
+  //   log('info', 'after mon espace client')
+  //   log('info', await browser.text('#E'))
+  //   // store cooke session in the browser
+  // }
+  async visit(url) {
+    return new Promise(resolve => {
+      browser.visit(url, err => {
+        log('info', `zombie visit error: ${err}`)
+        resolve()
+      })
+    })
+  }
 
-    // console.log(contracts[1].split(':'))
-    // const code = contracts[1].split(':')[2]
-    // console.log(code, 'code')
+  async pressButton(sel) {
+    return new Promise(resolve => {
+      browser.pressButton(sel, err => {
+        log('info', `zombie pressButton error: ${err}`)
+        // global.openInBrowser(cheerio.load(browser.html()))
+        resolve()
+      })
+    })
+  }
 
-    // await this.request(`https://www.red-by-sfr.fr/eTagP/ck.jsp?MLS~${code}~99`)
+  async reload() {
+    return new Promise(resolve => {
+      browser.reload(err => {
+        log('info', `zombie reload error: ${err}`)
+        resolve()
+      })
+    })
+  }
 
-    // this.request = this.requestFactory({
-    //   cheerio: true,
-    //   json: false,
-    //   debug: DEBUG,
-    //   headers: {}
-    // })
+  async authenticate(fields) {
+    await this.testSession()
+    await this.visit('https://www.sfr.fr/cas/login')
+    await sleep(5000)
+    await this.reload()
 
-    // this._jar.setCookie(
-    //   this.request.cookie(`MLS=${code}`),
-    //   'https://www.sfr.fr/'
-    // )
-    // console.log(this._jar)
-    // const $ = await this.request(
-    //   `https://www.sfr.fr/mon-espace-client/?e=${code}#sfrclicid=EC_Home_Selecteur`
-    // )
+    const websiteKey = browser
+      .query('.g-recaptcha')
+      .getAttribute('data-sitekey')
 
-    // get current contract
+    const recaptchaResponse = await solveCaptcha({
+      websiteKey,
+      websiteURL: 'https://www.sfr.fr/cas/login'
+    })
+
+    await browser.evaluate(
+      `$('#f-code').html('<input name="g-recaptcha-response" value="${recaptchaResponse}">')`
+    )
+
+    browser.fill('#username', fields.login)
+    browser.fill('#password', fields.password)
+    browser.check('#remember-me')
+
+    log('info', 'sending form')
+    await this.pressButton(`#identifier`)
+    log('info', 'after sending form')
+
+    // log('info', 'mon espace client')
+    // await this.visit('https://www.sfr.fr/mon-espace-client/')
+    // log('info', 'after mon espace client')
+
+    log('info', await browser.text('#E'))
+    await this.visit('https://www.sfr.fr/routage/consulter-facture')
+
+    await this.saveSession(browser)
+    browser.destroy()
+  }
+
+  async fetch(fields) {
+    // await this.testLogin(fields)
+    await this.authenticate(fields)
+    this.request = this.requestFactory({
+      cheerio: true,
+      json: false,
+      debug: DEBUG,
+      headers: {}
+    })
+
     const $ = await this.request('https://www.sfr.fr/mon-espace-client/')
     this.currentContract = $('#eTtN > div#L')
       .text()
       .trim()
       .split(' ')
       .join('')
-
     if (this.currentContract.includes('RÉSILIÉE')) {
       log('warn', `Found a terminated contract`)
       log('info', this.currentContract)
       return
     }
-
     const entries = await this.fetchBillsAttempts()
-
     const folderPath = `${fields.folderPath}/${
       this.currentContract
     } ${this.contractType.toUpperCase()}`
     await mkdirp(folderPath)
-
     const bills = entries.map(doc => ({
       ...doc,
       vendor: 'SFR',
@@ -104,7 +161,6 @@ class SfrConnector extends CookieKonnector {
         2
       )}€.pdf`
     }))
-
     return await this.saveBills(bills, folderPath, {
       identifiers: ['sfr']
     })
@@ -185,6 +241,7 @@ class SfrConnector extends CookieKonnector {
       form: submitForm
     })
 
+    // global.openInBrowser(login$)
     if (login$('#loginForm').length) {
       log('error', 'html form login failed after success in api login')
       throw new Error(errors.VENDOR_DOWN)
@@ -199,12 +256,12 @@ class SfrConnector extends CookieKonnector {
         url: 'https://www.sfr.fr/routage/consulter-facture',
         resolveWithFullResponse: true,
         followAllRedirects: false,
-        maxRedirects: 10,
+        // maxRedirects: 50,
         followOriginalHttpMethod: true,
         followRedirect: resp => {
           redirCount++
           response = resp
-          const result = redirCount < 10
+          const result = redirCount < 50
           return result
         }
       })
@@ -215,16 +272,16 @@ class SfrConnector extends CookieKonnector {
     return response
   }
 
-  async testSession() {
-    const response = await this.getConsulterFacturesWithoutRedirectionError()
-    const $ = response.body
-    const result = typeof $ === 'function' && $('#loginForm').length === 0
-    if (result === false) {
-      log('warn', 'wrong session')
-      await this.resetSession()
-    }
-    return result
-  }
+  // async testSession() {
+  //   const response = await this.getConsulterFacturesWithoutRedirectionError()
+  //   const $ = response.body
+  //   const result = typeof $ === 'function' && $('#loginForm').length === 0
+  //   if (result === false) {
+  //     log('warn', 'wrong session')
+  //     await this.resetSession()
+  //   }
+  //   return result
+  // }
 
   async getForm() {
     log('info', 'Logging in on Sfr Website...')
@@ -257,7 +314,15 @@ const connector = new SfrConnector({
   headers: {}
 })
 
-connector.run()
+try {
+  connector
+    .run()
+    .catch(err =>
+      log('info', `global promise exception caught: ${err.message}`)
+    )
+} catch (err) {
+  log('info', `global error caught: ${err.message}`)
+}
 
 function getFormData($form) {
   return $form
@@ -271,16 +336,16 @@ async function fetchBillingInfo() {
   const response = await this.getConsulterFacturesWithoutRedirectionError()
 
   // check that the page was not redirected to another sfr service
-  const finalPath = response.request.uri.path
+  const finalPath = response.headers.location || response.request.uri.path
   log('info', finalPath, 'finalPath after fetch billing info')
-  if (finalPath === '/facture-mobile/consultation') {
-    this.contractType = 'mobile'
-  } else if (finalPath === '/facture-fixe/consultation') {
-    this.contractType = 'internet'
-  } else if (finalPath === '/facture-mobile/consultation?red=1') {
+  if (finalPath.includes('/facture-mobile/consultation?red=1')) {
     this.contractType = 'redmobile'
-  } else if (finalPath === '/facture-fixe/consultation?red=1') {
+  } else if (finalPath.includes('/facture-fixe/consultation?red=1')) {
     this.contractType = 'redbox'
+  } else if (finalPath.includes('/facture-mobile/consultation')) {
+    this.contractType = 'mobile'
+  } else if (finalPath.includes('/facture-fixe/consultation')) {
+    this.contractType = 'internet'
   } else if (finalPath.includes('/cas/login')) {
     await this.resetSession()
     // next connector run may work
