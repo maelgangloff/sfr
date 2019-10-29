@@ -84,6 +84,13 @@ class SfrConnector extends CookieKonnector {
     await sleep(5000)
     await this.reload()
 
+    const $recaptcha = browser.query('.g-recaptcha')
+    if (!$recaptcha) {
+      log('warn', 'Could not find recaptcha')
+      await this.resetSession()
+      throw new Error(errors.VENDOR_DOWN)
+    }
+
     const websiteKey = browser
       .query('.g-recaptcha')
       .getAttribute('data-sitekey')
