@@ -145,8 +145,8 @@ class SfrConnector extends CookieKonnector {
       browser.destroy()
       return
     }
-    browser.destroy()
     const entries = await this.fetchBillsAttempts()
+    browser.destroy()
     const folderPath = `${fields.folderPath}/${
       this.currentContract
     } ${this.contractType.toUpperCase()}`
