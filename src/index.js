@@ -139,12 +139,13 @@ class SfrConnector extends CookieKonnector {
       .trim()
       .split(' ')
       .join('')
-    browser.destroy()
     if (this.currentContract.includes('RÉSILIÉE')) {
       log('warn', `Found a terminated contract`)
       log('info', this.currentContract)
+      browser.destroy()
       return
     }
+    browser.destroy()
     const entries = await this.fetchBillsAttempts()
     const folderPath = `${fields.folderPath}/${
       this.currentContract
