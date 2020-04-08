@@ -153,15 +153,22 @@ class SfrConnector extends CookieKonnector {
     const bills = entries.map(doc => ({
       ...doc,
       vendor: 'SFR',
+      recurrence: 'monthly',
       currency: '€',
       contract: this.currentContract,
       filename: `${utils.formatDate(doc.date)}_SFR_${doc.amount.toFixed(
         2
       )}€.pdf`
     }))
-    return await this.saveBills(bills, folderPath, {
-      identifiers: ['sfr']
-    })
+    return await this.saveBills(
+      bills,
+      { folderPath },
+      {
+        linkBankOperations: false,
+        fileIdAttributes: ['date', 'amount', 'contract'],
+        keys: ['date', 'amount', 'contract', 'vendor']
+      }
+    )
   }
 
   async testLogin(fields) {
