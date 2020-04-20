@@ -85,24 +85,20 @@ class SfrConnector extends CookieKonnector {
     await this.reload()
 
     const $recaptcha = browser.query('.g-recaptcha')
-    if (!$recaptcha) {
-      log('warn', 'Could not find recaptcha')
-      await this.resetSession()
-      throw new Error(errors.VENDOR_DOWN)
+    if ($recaptcha) {
+      const websiteKey = browser
+        .query('.g-recaptcha')
+        .getAttribute('data-sitekey')
+
+      const recaptchaResponse = await solveCaptcha({
+        websiteKey,
+        websiteURL: 'https://www.sfr.fr/cas/login'
+      })
+
+      await browser.evaluate(
+        `$('#f-code').html('<input name="g-recaptcha-response" value="${recaptchaResponse}">')`
+      )
     }
-
-    const websiteKey = browser
-      .query('.g-recaptcha')
-      .getAttribute('data-sitekey')
-
-    const recaptchaResponse = await solveCaptcha({
-      websiteKey,
-      websiteURL: 'https://www.sfr.fr/cas/login'
-    })
-
-    await browser.evaluate(
-      `$('#f-code').html('<input name="g-recaptcha-response" value="${recaptchaResponse}">')`
-    )
 
     browser.fill('#username', fields.login)
     browser.fill('#password', fields.password)
