@@ -19,7 +19,7 @@ module.exports = function parseMobileBills($) {
       .find('span:not(.sr-text-grey-14)')
     const firstBillDate = moment(fields.eq(0).text(), 'DD MMMM YYYY')
     const price = fields
-      .eq(1)
+      .eq(0)
       .text()
       .replace('€', '')
       .replace(',', '.')
