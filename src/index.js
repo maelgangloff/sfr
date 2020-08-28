@@ -292,7 +292,7 @@ class SfrConnector extends CookieKonnector {
       }
     }
     if (this.contractType === 'mobile') {
-      return parseMobileBills.bind(this)($)
+      return await parseMobileBills.bind(this)($)
     } else if (this.contractType === 'internet') {
       return parseFixeBills.bind(this)($)
     } else if (this.contractType === 'redmobile') {
