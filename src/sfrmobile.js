@@ -1,9 +1,8 @@
 const moment = require('moment')
-const bluebird = require('bluebird')
 const cheerio = require('cheerio')
 const { log } = require('cozy-konnector-libs')
 
-module.exports = function parseMobileBills($) {
+module.exports = async function parseMobileBills($) {
   const result = []
   moment.locale('fr')
   const baseURL = 'https://espace-client.sfr.fr'
@@ -35,75 +34,49 @@ module.exports = function parseMobileBills($) {
     log('info', 'wrong url for first PDF bill.')
   }
 
-  let trs = Array.from($('table.sr-multi-payment tbody tr'))
-
-  function getMoreBills() {
-    // find some more rows if any
-    return this.request(`${baseURL}/facture-mobile/consultation/plusDeFactures`)
-      .then($ => $('tr'))
-      .then($trs => {
-        if ($trs.length > trs.length) {
-          trs = Array.from($trs)
-          return getMoreBills.bind(this)()
-        } else return Promise.resolve()
-      })
+  async function getMoreBills() {
+    // fetching old bills list recursively
+    // The last fetched html should contains all history except the most recent bill
+    const $ = await this.request(
+      `${baseURL}/facture-mobile/consultation/plusDeFactures`
+    )
+    // Js call detection or button text detection, all two should work
+    if (
+      $.html().includes('plusFacture()') ||
+      $.html().includes('Plus&#xA0;de&#xA0;factures')
+    ) {
+      // Need more work to scroll more bills
+      //  return getMoreBills.bind(this)()
+      return $
+    } else {
+      return $
+    }
   }
 
-  return getMoreBills
-    .bind(this)()
-    .then(() => {
-      return bluebird
-        .mapSeries(trs, tr => {
-          let link = $(tr)
-            .find('td')
-            .eq(1)
-            .find('a')
-          if (link.length === 1) {
-            link = baseURL + link.attr('href')
-            return this.request(link).then($ =>
-              $('.sr-container-wrapper-m')
-                .eq(0)
-                .html()
-            )
-          } else {
-            return false
-          }
-        })
-        .then(list => list.filter(item => item))
-        .then(list =>
-          list.map(item => {
-            const $ = cheerio.load(item)
-            const fileurl = $('#lien-duplicata-pdf-').attr('href')
-            const fields = $('.sr-container-content')
-              .eq(0)
-              .find('span:not(.sr-text-grey-14)')
-            const date = moment(
-              fields
-                .eq(0)
-                .text()
-                .trim(),
-              'DD MMMM YYYY'
-            )
-            const price = fields
-              .eq(1)
-              .text()
-              .trim()
-              .replace('€', '')
-              .replace(',', '.')
-            if (price) {
-              const bill = {
-                date: date.toDate(),
-                amount: parseFloat(price),
-                fileurl: `${baseURL}${fileurl}`
-              }
-              return bill
-            } else return null
-          })
-        )
-        .then(list => list.filter(item => item))
-        .then(bills => {
-          if (result.length) bills.unshift(result[0])
-          return bills
-        })
-    })
+  const $billsHtml = await getMoreBills.bind(this)()
+  const divs = Array.from($billsHtml('div.sr-container-content-line'))
+  for (const div of divs) {
+    const $div = cheerio.load(div)
+    const fileurl = baseURL + $div('a').attr('href')
+    const amount = parseFloat(
+      $div('span.sr-text-18B')
+        .text()
+        .trim()
+        .replace('€', '')
+        .replace(',', '.')
+    )
+    const date = moment(
+      $div('span.sr-text-grey-14')
+        .find('span')
+        .text(),
+      'DD MMMM YYYY'
+    ).toDate()
+    const bill = {
+      fileurl,
+      amount,
+      date
+    }
+    result.push(bill)
+  }
+  return result
 }
