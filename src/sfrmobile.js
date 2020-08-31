@@ -12,13 +12,20 @@ module.exports = async function parseMobileBills($) {
   const firstBillUrl = $firstBill.find('#lien-telecharger-pdf').attr('href')
 
   if (firstBillUrl) {
-    const fields = $firstBill
+    const firstBillDate = moment(
+      $firstBill
+        .find('.sr-container-content')
+        .eq(0)
+        .find('span')
+        .last()
+        .text(),
+      'DD MMMM YYYY'
+    )
+    const price = $firstBill
       .find('.sr-container-content')
       .eq(0)
-      .find('span:not(.sr-text-grey-14)')
-    const firstBillDate = moment(fields.eq(0).text(), 'DD MMMM YYYY')
-    const price = fields
-      .eq(0)
+      .find('span')
+      .first()
       .text()
       .replace('€', '')
       .replace(',', '.')
@@ -28,7 +35,6 @@ module.exports = async function parseMobileBills($) {
       amount: parseFloat(price),
       fileurl: `${baseURL}${firstBillUrl}`
     }
-
     result.push(bill)
   } else {
     log('info', 'wrong url for first PDF bill.')
@@ -68,6 +74,9 @@ module.exports = async function parseMobileBills($) {
     const date = moment(
       $div('span.sr-text-grey-14')
         .find('span')
+        // if two span date are present, we chose the second
+        // because first one is 'Payé le ...'
+        .last()
         .text(),
       'DD MMMM YYYY'
     ).toDate()
