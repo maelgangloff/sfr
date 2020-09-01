@@ -12,7 +12,7 @@ const {
   utils
 } = require('cozy-konnector-libs')
 
-const DEBUG = false
+const DEBUG = true
 
 const parseMobileBills = require('./sfrmobile.js')
 const parseFixeBills = require('./sfrfixe.js')
@@ -296,7 +296,7 @@ class SfrConnector extends CookieKonnector {
     } else if (this.contractType === 'internet') {
       return parseFixeBills.bind(this)($)
     } else if (this.contractType === 'redmobile') {
-      return parseRedMobileBills.bind(this)($)
+      return await parseRedMobileBills.bind(this)($)
     } else if (this.contractType === 'redbox') {
       return parseRedBoxBills.bind(this)($)
     }
