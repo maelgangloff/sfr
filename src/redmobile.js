@@ -38,16 +38,10 @@ module.exports = async function parseRedMobileBills($) {
     log('info', 'wrong url for first PDF bill.')
   }
 
-  async function getMoreBills() {
-    // find some more rows if any
-    // Always respond a 404, we don't know why. It's not a missing header
-    return await this.request(
-      `${baseURL}/facture-mobile/consultation/plusDeFactures`
-    )
-  }
+  // we have a 6 month history as a backup
+  // Recursivly calling plusDeFactures could give more but end in a 404 as a standard request
 
-  //  const $billsHtml = await getMoreBills.bind(this)()
-  const $billsHtml = $ // use the 6 month history as a backup
+  const $billsHtml = $
   const divs = Array.from($billsHtml('div.sr-container-content-line'))
   for (const div of divs) {
     const $div = cheerio.load(div)
