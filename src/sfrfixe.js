@@ -1,7 +1,10 @@
 const moment = require('moment')
 const bluebird = require('bluebird')
 const cheerio = require('cheerio')
-const { log } = require('cozy-konnector-libs')
+const { log, cozyClient } = require('cozy-konnector-libs')
+
+const models = cozyClient.new.models
+const { Qualification } = models.document
 
 module.exports = function parseFixeBills($) {
   const result = []
@@ -34,7 +37,16 @@ module.exports = function parseFixeBills($) {
     const bill = {
       date: firstBillDate.toDate(),
       amount: parseFloat(price),
-      fileurl: `${baseURL}${firstBillUrl}`
+      fileurl: `${baseURL}${firstBillUrl}`,
+      metadata: {
+        contentAuthor: 'sfr.fr',
+        issueDate: firstBillDate.toDate(),
+        datetime: new Date(),
+        datetimeLabel: `issueDate`,
+        isSubscription: true,
+        carbonCopy: true,
+        qualification: Qualification.getByLabel('phone_invoice')
+      }
     }
 
     result.push(bill)
@@ -84,7 +96,16 @@ module.exports = function parseFixeBills($) {
           const bill = {
             date: date.toDate(),
             amount: parseFloat(price),
-            fileurl: `${baseURL}${fileurl}`
+            fileurl: `${baseURL}${fileurl}`,
+            metadata: {
+              contentAuthor: 'sfr.fr',
+              issueDate: date.toDate(),
+              datetime: new Date(),
+              datetimeLabel: `issueDate`,
+              isSubscription: true,
+              carbonCopy: true,
+              qualification: Qualification.getByLabel('phone_invoice')
+            }
           }
           return bill
         } else return null
