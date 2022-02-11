@@ -1,6 +1,6 @@
 process.env.SENTRY_DSN =
   process.env.SENTRY_DSN ||
-  'https://896462846d0e40d0b1522d98ab103133@sentry.cozycloud.cc/118'
+  'https://bacf6081e84742d9b7b2bbe958df2c7f@errors.cozycloud.cc/27'
 
 const sleep = require('util').promisify(global.setTimeout)
 const {
@@ -9,8 +9,12 @@ const {
   log,
   solveCaptcha,
   mkdirp,
-  utils
+  utils,
+  cozyClient
 } = require('cozy-konnector-libs')
+
+const models = cozyClient.new.models
+const { Qualification } = models.document
 
 const DEBUG = true
 
@@ -154,7 +158,18 @@ class SfrConnector extends CookieKonnector {
       contract: this.currentContract,
       filename: `${utils.formatDate(doc.date)}_SFR_${doc.amount.toFixed(
         2
-      )}€.pdf`
+      )}€.pdf`,
+      fileAttributes: {
+        metadata: {
+          contentAuthor: 'srf.fr',
+          issueDate: utils.formatDate(doc.date),
+          datetime: new Date(),
+          datetimeLabel: `issueDate`,
+          isSubscription: true,
+          carbonCopy: true,
+          qualification: Qualification.getByLabel('isp_invoice')
+        }
+      }
     }))
     return await this.saveBills(
       bills,
