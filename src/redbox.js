@@ -1,7 +1,10 @@
 const moment = require('moment')
 const bluebird = require('bluebird')
 const cheerio = require('cheerio')
-const { log } = require('cozy-konnector-libs')
+const { log, cozyClient } = require('cozy-konnector-libs')
+
+const models = cozyClient.new.models
+const { Qualification } = models.document
 
 module.exports = function parseRedBoxBills($) {
   const result = []
@@ -36,7 +39,16 @@ module.exports = function parseRedBoxBills($) {
       amount: parseFloat(price),
       fileurl: `${baseURL}${firstBillUrl}`,
       filename: getFileName(firstBillDate),
-      vendor: 'SFR RED BOX'
+      vendor: 'SFR RED BOX',
+      metadata: {
+        contentAuthor: 'red-by-sfr.fr',
+        issueDate: firstBillDate,
+        datetime: new Date(),
+        datetimeLabel: `issueDate`,
+        isSubscription: true,
+        carbonCopy: true,
+        qualification: Qualification.getByLabel('isp_invoice')
+      }
     }
 
     result.push(bill)
@@ -88,7 +100,16 @@ module.exports = function parseRedBoxBills($) {
             amount: parseFloat(price),
             fileurl: `${baseURL}${fileurl}`,
             filename: getFileName(date),
-            vendor: 'SFR RED BOX'
+            vendor: 'SFR RED BOX',
+            metadata: {
+              contentAuthor: 'red-by-sfr.fr',
+              issueDate: date.toDate(),
+              datetime: new Date(),
+              datetimeLabel: `issueDate`,
+              isSubscription: true,
+              carbonCopy: true,
+              qualification: Qualification.getByLabel('isp_invoice')
+            }
           }
           return bill
         } else return null
