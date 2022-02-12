@@ -176,7 +176,7 @@ class SfrConnector extends CookieKonnector {
     let token
     try {
       let { createToken } = await this.requestJson(
-        'https://www.sfr.fr/cas/services/rest/1.0/createToken.json?duration=8640',
+        'https://www.sfr.fr/cas/services/rest/3.2/createToken.json?duration=8640',
         {
           auth: {
             user: fields.login,
