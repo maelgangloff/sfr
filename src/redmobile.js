@@ -1,6 +1,9 @@
 const moment = require('moment')
 const cheerio = require('cheerio')
-const { log } = require('cozy-konnector-libs')
+const { log, cozyClient } = require('cozy-konnector-libs')
+
+const models = cozyClient.new.models
+const { Qualification } = models.document
 
 module.exports = async function parseRedMobileBills($) {
   const result = []
@@ -31,7 +34,16 @@ module.exports = async function parseRedMobileBills($) {
       amount: parseFloat(price),
       fileurl: `${baseURL}${firstBillUrl}`,
       filename: getFileName(firstBillDate),
-      vendor: 'SFR RED MOBILE'
+      vendor: 'SFR RED MOBILE',
+      metadata: {
+        contentAuthor: 'red-by-sfr.fr',
+        issueDate: firstBillDate,
+        datetime: new Date(),
+        datetimeLabel: `issueDate`,
+        isSubscription: true,
+        carbonCopy: true,
+        qualification: Qualification.getByLabel('phone_invoice')
+      }
     }
     result.push(bill)
   } else {
@@ -65,7 +77,16 @@ module.exports = async function parseRedMobileBills($) {
     const bill = {
       fileurl,
       amount,
-      date
+      date,
+      metadata: {
+        contentAuthor: 'red-by-sfr.fr',
+        issueDate: date.format('YYYY-MM-DD'),
+        datetime: new Date(),
+        datetimeLabel: `issueDate`,
+        isSubscription: true,
+        carbonCopy: true,
+        qualification: Qualification.getByLabel('phone_invoice')
+      }
     }
     result.push(bill)
   }
